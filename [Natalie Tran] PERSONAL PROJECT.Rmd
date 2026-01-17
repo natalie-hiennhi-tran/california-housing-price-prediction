@@ -1,0 +1,305 @@
+---
+title: "PERSONAL PROJECT - California Housing Price Prediction"
+author: "Natalie Tran"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## **Introduction**
+
+The dataset, referred to as the California Housing Data, originates from the 1990 U.S. Census and was first introduced by R. Kelly Pace and Ronald Barry (1997) in their paper Sparse Spatial Autoregressions (Statistics & Probability Letters, 33(3), 291–297). It contains 20,640 observations on California housing block groups, each including demographic, economic, and geographic information. The response variable in this project is the median house value for each block group, measured in U.S. dollars. The remaining variables will be treated as potential predictors of housing prices.
+
+Below is a brief description of the main variables used in this project:
+
+-   **median_house_value**: Median house value in the block group (U.S. dollars) — *response variable*.
+
+-   **median_income**: Median income of households in the block group (in tens of thousands of dollars).
+
+-   **housing_median_age**: Median age of houses in the block group (years).
+
+-   **total_rooms**: Total number of rooms in all houses in the block group.
+
+-   **total_bedrooms**: Total number of bedrooms in all houses in the block group.
+
+-   **population**: Total population in the block group (number of people).
+
+-   **households**: Number of households in the block group (occupied housing units).
+
+-   **longitude**: Longitude coordinate of the block group (degrees).
+
+-   **latitude**: Latitude coordinate of the block group (degrees).
+
+-   **ocean_proximity**: Categorical variable indicating proximity to the ocean (e.g., “INLAND”, “NEAR OCEAN”).
+
+This project focuses on both modeling and prediction. First, I will use exploratory data analysis (EDA) to understand how individual variables behave and how they are related to median house value. Then, I will fit regression models to study the relationship between housing prices and selected predictors, and compare a linear model with nonlinear alternatives.
+
+The main research questions are:
+
+1.  Which demographic and housing characteristics have the strongest relationship with median house value?
+
+2.  How does income relate to housing prices? Is it linear?
+
+3.  Are there regional differences in housing prices across California?
+
+4.  How is the distribution of house prices shaped?
+
+5.  Which functional form best fits the data?
+
+## **Exploratory Data Analysis**
+
+This project aims to explore how socioeconomic and geographic factors influence housing prices across California.
+
+A check for missing data (Appendix A) showed that the variable *total_bedrooms* contained 207 missing values, while all other variables were complete. Since the amount of missingness was small (about 1% of the dataset), I handled it by imputing the median value in those missing spots, ensuring a complete dataset for modeling.
+
+#### **1. Which demographic and housing characteristics have the strongest relationship with median house value?**
+
+To identify which variables are most strongly associated with housing prices, I computed the correlation between *median_house_value* and each numeric predictor. The results are shown in Table 1 below.
+
+|                   | Median House Value |
+|-------------------|--------------------|
+| Longitude         | -0.04539822        |
+| Latitude          | -0.14463821        |
+| Median House Age  | 0.10643205         |
+| Total rooms       | 0.13329413         |
+| Total bedrooms    | 0.04968618         |
+| Population        | -0.02529973        |
+| Households        | 0.06489355         |
+| **Median Income** | **0.68835548**     |
+
+: Correlation between Median House Value and each numerical predictor
+
+Among all variables examined, Median Income has by far the strongest correlation with house value (r = 0.69). In other words, higher-income areas tend to have significantly higher home prices. On the other hand, other demographic variables, such as population, households, and total bedrooms, exhibit very weak correlations with house prices (\|r\| \< 0.1).
+
+Notice that three predicted variables have a negative correlation with the house prices. The population has a very small negative correlation (r = -0.025), reflecting that densely populated block groups are not necessarily the most expensive areas. The negative relationship between longitude/latitude and prices likely shows underlying geographic effects (for example, differences between coastal and inland areas), but a deeper exploration of location-based variation will be conducted in Research Question 3.
+
+A correlation heatmap (Figure 1) further illustrates these relationships: income shows the darkest (strongest) correlation with house value, whereas most other predictors appear much lighter. The heatmap also highlights a cluster of variables that are strongly correlated with each other (*total_rooms*, *total_bedrooms*, *population*, and *households*), suggesting possible redundancy that will be addressed during model selection.
+
+![](images/clipboard-735287926.png){width="491"}
+
+Overall, the table and heatmap indicate that *median income is the strongest single predictor* of median house value, with substantially weaker relationships for the remaining demographic and housing variables.
+
+#### **2. How does income relate to housing prices? Is it linear?**
+
+To examine the relationship between income and housing prices, I plotted *median_house_value* against *median_income* and combined both a linear regression line and a quadratic (second-degree polynomial) curve. The scatterplot (Figure 2) shows a clear positive association between income and house value, indicating that higher-income areas tend to have more expensive homes. The overall pattern suggests a strong upward trend with slight curvature at higher income levels, where the relationship begins to flatten. This flattening is partly due to the dataset's upper-censoring at \$500,000.
+
+![](images/clipboard-1715302939.png){width="582"}
+
+I fit two models to quantify this relationship. The simple linear regression explains approximately 47.3% (Adjusted R^2^ = 0.4734) of the variation in house value (*Appendix*). Although an R^2^ in the 0.47 range may not seem extremely high, this value is actually quite strong for socioeconomic and housing data, where many factors should influence prices, and single predictors rarely explain large proportions of variance. The highly significant coefficient for median income (p-value \< 2e-16) further confirms that income is a key driver of housing value.
+
+Afterwards, I fit a quadratic model by adding a quadratic term. This model produces a slightly higher adjusted R^2^ of about 0.478, a very small improvement. This suggests that although there is some curvature, consistent with the visual pattern in the scatterplot, the relationship between income and housing prices is primarily linear.
+
+#### **3. Are there regional differences in housing prices across California?**
+
+To examine whether housing prices vary across different regions of California, I explored the geographic distribution of median house values using longitude and latitude coordinates. Figure 3.1 displays each housing block group as a point on the California map, colored according to its relevant price level. The plot reveals a clear and consistent spatial trend: higher housing prices are concentrated along the coast, especially near the Los Angeles region and the San Francisco Bay Area. In contrast, inland regions such as the Central Valley exhibit mostly lower-priced housing, shown by dense clusters of blue points.
+
+![](images/clipboard-2240123410.png){width="539"}
+
+To be more specific, Figure 3.2 presents a boxplot of median house value grouped by the *ocean_proximity* category. The \<1H OCEAN, NEAR OCEAN, and NEAR BAY categories all show higher prices, with noticeably higher medians and broader spreads, reflecting the diversity and desirability of coastal neighborhoods. Although the ISLAND category contains very few observations (only 5), it exhibits some of the highest values in the dataset.
+
+![](images/clipboard-3883878375.png){width="508"}
+
+Recall from Table 1, the negative relationship between latitude and house price (r = -0.145) also means that as latitude increases (moving North), housing prices tend to decrease slightly. This aligns with the known geographic pattern that Southern California, which lies at lower latitudes, tends to have higher housing costs.
+
+Together, these visual analyses confirm that regional factors strongly influence housing prices; therefore, they are likely to be important components of the regression model.
+
+#### **4. How is the distribution of house prices shaped?**
+
+Before constructing a regression model, it is important to understand the distribution of the response variable, *median_house_value*. A histogram (Figure 4) of the housing values reveals a right-skewed distribution with a long upper tail, as well as a noticeable spike at the maximum value of \$500,001. This spike occurs because many homes in the dataset were top-coded at this amount in the 1990 Census, meaning values above this threshold were recorded as the same number. Such censoring creates a concentration at the upper end of the distribution that may affect model fitting and interpretation.
+
+![](images/clipboard-4059008713.png){width="477"}
+
+Besides, the skewness in the distribution suggests that the variance of housing prices is not constant and that the relationship between predictors and the response may benefit from transformation.
+
+## **Model construction and analysis**
+
+Based on the explanatory analysis, I estimated three regression models: a standard linear model, a log-linear model, and a double-log model. These models were chosen to compare different functional forms and determine which specification best captures how income, housing characteristics, and location influence housing prices. Table 2 reports the results.
+
+#### **Model Predictions prior to Estimation**
+
+The EDA suggested that the log-linear model would perform well. Housing values were heavily right-skewed (Figure 4) and top-coded at \$500,001, indicating that a log transformation of the dependent variable could stabilize variance and improve model behavior. The scatterplot of income versus house value (Figure 2) showed a mostly linear trend with only a mild curvature, suggesting that the linear model would be reasonable but not optimal, and a quadratic model wouldn't be much better either. Moreover, it is also worth trying the double-log form, which is common in economics for elasticity interpretation.
+
+#### **Model (1): Linear Specification**
+
+Model (1) shows that median income, longitude, latitude, and ocean proximity are strongly significant and align with expectations from EDA. Several housing-size variables (total rooms and total bedrooms) are statistically significant but inconsistent in sign due to multicollinearity within this group. The Adjusted R^2^ of 0.645 means that the model explains a substantial portion of the variation but leaves room for improvement.
+
+#### **Model (2): Log-Linear Specification**
+
+In Model (2), the dependent variable is log-transformed. This improves the Adjusted R^2^ to 0.665, consistent with the expectation that logging a skewed variable enhances fit. With this new function, a one-unit increase in median income (the predictor) will induce a 16.7% increase in the predicted housing value.
+
+#### **Model (3): Double-log Specification**
+
+Model (3) applies a log transformation to both the dependent variable and median income. While the original motivation for the double-log model was based on economic elasticity interpretation, the histogram of median income (Appendix C) shows that income is also right-skewed.
+
+Consistent with these expectations, the double-log model, having the highest Adjusted R^2^, explains 67.1% of the median house price variation, outperforming both linear and log-linear models. With this model, a 1% change in median income will induce a 0.693% change in the median house prices, ceteris paribus. Geographic variables and ocean proximity categories remain strongly significant, reinforcing the importance of location identified earlier in EDA.
+
+![](images/clipboard-1986401307.png)
+
+## **Discussion**
+
+The regression analysis shows clear and consistent patterns about what drives housing prices in California. Income and geographic location emerge as the most influential factors, while many housing-size variables contribute little. The performance of the models reflects the structure of the data: both housing values and income are right-skewed (Appendix C), the log-based models handle the distribution more effectively than the linear form (Table 2). The double-log model performs slightly better than the log-linear version, suggesting that proportional changes in income are closely associated with proportional changes in house values. In summary, the double-log model explains 67.1% of the median household variation, and the coefficient of log(median_income) indicates a 1% change in median income will induce a 0.693% change in the median house prices, ceteris paribus.
+
+Although the models fit reasonably well, there are several limitations to note. The data contain a substantial number of top-coded house values at \$500,001, which compresses the upper tail and understates variation in high-value coastal areas. Additionally, some predictors, particularly the size-related variables, are highly correlated (Figure 1). Moreover, the dataset omits many real-world factors that might influence housing markets, such as school quality, crime rates, environmental risks, and neighborhood amenities.
+
+Despite these limitations, the results provide a coherent picture: income and proximity to coastal regions are the strongest determinants of housing prices. The double-log model offers the clearest and most stable interpretation, making it the most appropriate specification among those considered.
+
+## **References**
+
+Dataset: California housing data, derived from the 1990 U.S. Census and first introduced by Pace, R. K., & Barry, R. (1997). Sparse Spatial Autoregressions. Statistics & Probability Letters, 33(3), 291–297. [https://doi.org/10.1016/S0167-7152(96)00140-X](https://doi.org/10.1016/S0167-7152(96)00140-X){.uri}
+
+Siegler, Mark V. *Introduction to Data Analysis and Econometrics*. Forthcoming 2026, W. W. Norton & Company, pp. 261–269.
+
+## **Appendix**
+
+#### **Appendix A**
+
+```{r}
+#Dataset
+ca_housing <- read.csv("Cali_House_Price.csv", header = T)
+colnames(ca_housing)[3] <- "house_age"
+
+#Check for NA values
+sum(is.na(ca_housing)) #207
+colSums(is.na(ca_housing)) #All 207 NAs are in total bedrooms column
+ca_housing$total_bedrooms[is.na(ca_housing$total_bedrooms)] <- median(ca_housing$total_bedrooms, na.rm = TRUE)
+str(ca_housing)
+summary(ca_housing)
+```
+
+#### **Appendix B**
+
+```{r}
+#Question 1 - Correlation
+numeric_vars <- ca_housing[sapply(ca_housing,is.numeric)]
+cor_matrix <- cor(numeric_vars, use= "complete.obs")
+cor_matrix #Table 1
+cor(ca_housing$median_house_value, ca_housing$median_income)
+
+#Figure 1
+#install.packages("corrplot")
+library(corrplot)
+corrplot(cor_matrix, method = "color")
+title("Figure 1. Heatmap correlation", cex.main=1, line=3)
+```
+
+```{r}
+#Question 2 - Model for Median House Value and Median Income
+#Linear Model
+inc_house <- lm(median_house_value ~ median_income, ca_housing)
+summary(inc_house)
+
+plot(ca_housing$median_income, ca_housing$median_house_value,
+     col = "steelblue",
+     pch = 1,
+     xlab = "Median Income (ten of thousands of dollars)", 
+     ylab = "Median House Value (US dollar)",
+     cex.main = 0.9,
+     main = "Figure 2. Median House Value vs. Median Income and two regression lines")
+
+abline(inc_house, 
+       col = "red", 
+       lwd = 2)
+
+#Quadratic Model
+inc_house_quad <- lm(median_house_value ~ median_income + I(median_income^2), ca_housing)
+summary(inc_house_quad)
+
+order_id <- order(ca_housing$median_income)
+
+lines(x = ca_housing$median_income[order_id], 
+      y = fitted(inc_house_quad)[order_id],
+      col = "black", 
+      lwd = 2) 
+```
+
+```{r}
+#Question 3
+#Scatterplot - Geographic Distribution of Housing Prices
+price_col <- colorRampPalette(c("blue", "yellow", "red"))(100)
+value_rank <- cut(ca_housing$median_house_value,
+                  breaks = 100,
+                  labels = FALSE)
+
+plot(ca_housing$longitude, ca_housing$latitude,
+     col = price_col[value_rank],
+     pch = 16, cex = 0.6,
+     xlab = "Longitude",
+     ylab = "Latitude",
+     main = "Figure 3.1 Geographic Distribution of Housing Prices")
+legend("topright",
+       legend = c("Low price", "Mid price", "High price"),
+       col = c("blue", "yellow", "red"),
+       pch = 16,
+       pt.cex = 1)
+
+#Boxplot - Housing Prices by Ocean Proximity
+par(mar = c(5, 4, 4, 0.1))
+ca_housing$ocean_proximity <- factor(
+  ca_housing$ocean_proximity,
+  levels = c("INLAND", "<1H OCEAN", "NEAR OCEAN", "NEAR BAY", "ISLAND"))
+boxplot(median_house_value ~ ocean_proximity,
+        data = ca_housing,
+        col = "lightblue",
+        xlab = "Ocean Proximity",
+        ylab = "Median House Value",
+        main = "Figure 3.2 Housing Prices by Ocean Proximity")
+```
+
+```{r}
+#Question 4 - Histogram of Median House Value
+hist(ca_housing$median_house_value,
+     col = "olivedrab3",
+     breaks = 40,
+     main = "Figure 4. Histogram of Median House Value",
+     xlab = "Median House Value")
+```
+
+#### **Appendix C**
+
+```{r}
+#Median Income is right-skewed which indicates a need for a log transformation
+hist(ca_housing$median_income,
+     col = "deeppink",
+     breaks = 40,
+     main = "Histogram of Median Income",
+     xlab = "Median Income")
+```
+
+```{r}
+#Model construction and analysis
+#Linear
+m1 <- lm(median_house_value~., ca_housing)
+summary(m1)
+
+#Log-linear
+m2 <- lm(log(median_house_value) ~., data = ca_housing)
+summary(m2)
+
+#Double-log
+m3 <- lm(log(median_house_value) ~ log(median_income) + house_age + total_rooms + total_bedrooms + population + households + longitude + latitude + ocean_proximity, data = ca_housing)
+summary(m3)
+```
+
+```{r}
+#Table 2 - Stargazer
+#install.packages("AER")
+library(AER)
+rob_se <- list(sqrt(diag(vcovHC(m1, type = "HC1"))),
+               sqrt(diag(vcovHC(m2, type = "HC1"))),
+               sqrt(diag(vcovHC(m3, type = "HC1"))))
+
+#install.packages("stargazer")
+library(stargazer)
+#install.packages("tinytex")
+#tinytex::install_tinytex()
+stargazer(m1,m2,m3,
+          digits = 3,
+          header = FALSE,
+          type = "html",
+          se = rob_se,
+          out = "prj2.html",
+          title = "Table 2. Multiple Regression Models",
+          model.numbers = FALSE,
+          column.labels = c("(1)", "(2)", "(3)"))
+```
